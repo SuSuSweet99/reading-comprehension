@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>英语学习工具</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Roboto, system-ui, sans-serif; background: #f4f7fc; color: #222; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        nav { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+        nav button { padding: 10px 18px; border: none; border-radius: 20px; background: #e0e7ff; color: #1e3a8a; font-weight: 600; cursor: pointer; }
+        nav button.active { background: #1e3a8a; color: white; }
+        .panel { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 24px; }
+        h2 { margin-bottom: 16px; color: #1e3a8a; }
+        .btn { padding: 8px 20px; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; background: #2563eb; color: white; }
+        .btn-outline { background: white; color: #2563eb; border: 1px solid #2563eb; }
+        .upload-area { border: 2px dashed #93c5fd; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; margin: 8px 0; }
+        .upload-area:hover { background: #f0f7ff; }
+        .passage-box { background: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; line-height: 1.7; white-space: pre-wrap; }
+        .question-block { margin: 16px 0; padding-left: 16px; border-left: 3px solid #2563eb; }
+        .options label { display: block; margin: 6px 0; }
+        .result-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: bold; }
+        .correct-count { background: #dcfce7; color: #166534; }
+        .wrong-count { background: #fee2e2; color: #991b1b; }
+        .tool-row { display: flex; gap: 10px; margin: 12px 0; align-items: center; flex-wrap: wrap; }
+        select, input, textarea { padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; }
+        .hidden { display: none; }
+        .grammar-item { background: #f1f5f9; border-radius: 12px; padding: 16px; margin: 12px 0; }
+        .format-guide { background: #eef2ff; border-radius: 12px; padding: 16px; font-size: 0.9em; white-space: pre-wrap; margin: 12px 0; }
+        .article-list-item { display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 8px 16px; border-radius: 8px; margin: 8px 0; }
+        .wrong-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .wrong-tab { padding: 8px 16px; background: #e0e7ff; border-radius: 20px; cursor: pointer; font-weight: 600; }
+        .wrong-tab.active { background: #1e3a8a; color: white; }
+        .word-card { display: inline-block; background: #eef2ff; padding: 4px 10px; margin: 4px; border-radius: 20px; font-size: 0.9em; }
+        .word-card button { background: none; border: none; color: #c00; font-weight: bold; cursor: pointer; margin-left: 4px; }
+        .word-list-container { background: #f8fafc; border-radius: 12px; padding: 12px; min-height: 60px; max-height: 200px; overflow-y: auto; margin: 8px 0; }
+        .word-mode-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+        .word-mode-tab { padding: 6px 16px; background: #e0e7ff; border-radius: 20px; cursor: pointer; font-weight: 600; }
+        .word-mode-tab.active { background: #1e3a8a; color: white; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <nav>
+        <button id="nav-library" class="active">📚 题库管理</button>
+        <button id="nav-practice">📝 开始练习</button>
+        <button id="nav-wrong">❌ 错题集</button>
+        <button id="nav-grammar">🧠 语法生成</button>
+    </nav>
+
+    <!-- 题库管理面板 -->
+    <div id="panel-library" class="panel">
+        <h2>导入阅读理解</h2>
+        <details>
+            <summary style="cursor:pointer; font-weight:bold;">📋 格式说明</summary>
+            <div class="format-guide">Word：Title: 标题... Questions: ... A. ... B. ... Answer: A<br>粘贴：含选项和（正确答案）或 正确答案：A</div>
+        </details>
+        <div class="upload-area" id="uploadDocxTrigger">📁 上传 Word 文件（.docx）自动解析</div>
+        <input type="file" id="docxFileInput" accept=".docx" hidden>
+        <button id="showManualAdd" class="btn-outline" style="margin:12px 0;">✏️ 粘贴一篇阅读理解</button>
+        <div id="manualAddForm" class="hidden" style="border:1px solid #cbd5e1; border-radius:12px; padding:16px; margin-bottom:16px;">
+            <h4>粘贴文章+题目</h4>
+            <textarea id="manualPasteArea" rows="12" placeholder="粘贴完整文本" style="width:100%;"></textarea>
+            <button id="parseManualBtn" class="btn" style="margin-top:6px;">解析并预览</button>
+            <div id="manualPreview" class="hidden" style="margin-top:12px;">
+                <div id="previewContent"></div>
+                <button id="confirmManualSave" class="btn" style="margin-top:8px;">确认保存到题库</button>
+            </div>
+        </div>
+        <h3>题库（<span id="articleCount">0</span>篇）</h3>
+        <div id="articleList"></div>
+        <button class="btn-outline" id="clearLibrary" style="margin-top:12px;">清空题库</button>
+    </div>
+
+    <!-- 练习面板 -->
+    <div id="panel-practice" class="panel hidden">
+        <h2>练习模式</h2>
+        <div class="tool-row">
+            <button id="randomPick" class="btn">🎲 随机一篇</button>
+            <button id="sequentialPick" class="btn">📋 按顺序</button>
+            <span id="currentIndexDisplay"></span>
+        </div>
+        <div id="practiceContent"><p>点击按钮开始</p></div>
+        <button id="translateBtn" class="btn-outline" style="margin-top:12px;">🌐 翻译选中文本</button>
+    </div>
+
+    <!-- 错题集面板 -->
+    <div id="panel-wrong" class="panel hidden">
+        <h2>错题集</h2>
+        <div class="wrong-tabs">
+            <div id="tab-reading" class="wrong-tab active">📖 阅读理解</div>
+            <div id="tab-grammar" class="wrong-tab">📝 语法错题</div>
+        </div>
+        <div id="wrongReadingList"></div>
+        <div id="wrongGrammarList" class="hidden"></div>
+    </div>
+
+    <!-- 语法生成面板 -->
+    <div id="panel-grammar" class="panel hidden">
+        <h2>📚 语法生成（高考~四级）</h2>
+        <div style="border:1px solid #d1d5db; border-radius:12px; padding:16px; margin-bottom:16px;">
+            <div class="word-mode-tabs">
+                <div id="wordEditTab" class="word-mode-tab active">📝 编辑单词</div>
+                <div id="wordViewTab" class="word-mode-tab">👀 查看单词</div>
+            </div>
+            <div id="wordEditMode">
+                <div class="tool-row" style="align-items: flex-end;">
+                    <div style="flex:1;"><label>英文</label><input id="newWordEn" placeholder="decide" style="width:100%;"></div>
+                    <div style="flex:1;"><label>中文</label><input id="newWordCn" placeholder="决定" style="width:100%;"></div>
+                    <button id="addWordBtn" class="btn">➕ 添加</button>
+                </div>
+                <div class="tool-row" style="margin-top:8px;">
+                    <div class="upload-area" id="uploadWordsTrigger" style="flex:1;">📁 上传 TXT 追加单词</div>
+                    <input type="file" id="wordsFileInput" accept=".txt" hidden>
+                    <button id="clearWordsBtn" class="btn-outline">🗑️ 清空全部</button>
+                </div>
+                <div class="tool-row" style="margin-top:8px;">
+                    <button id="saveWordsBtn" class="btn-outline">💾 保存单词本</button>
+                    <button id="exportWordsBtn" class="btn-outline">⬇️ 导出单词本</button>
+                </div>
+            </div>
+            <div id="wordViewMode" class="hidden">
+                <p>共 <span id="wordCount">0</span> 个单词</p>
+                <div class="word-list-container" id="wordViewContainer">暂无单词</div>
+                <button id="exportWordsBtnView" class="btn-outline" style="margin-top:8px;">⬇️ 导出单词本</button>
+            </div>
+            <div class="word-list-container" id="wordListContainer" style="margin-top:12px;">暂无单词</div>
+        </div>
+        <div class="tool-row">
+            <label>生成数量：</label>
+            <input type="number" id="grammarCount" value="20" min="1" max="50" style="width:80px;"> 道
+        </div>
+        <button id="genGrammarBtn" class="btn">🎲 生成语法选择题</button>
+        <div id="grammarOutput" style="margin-top:16px;"></div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // ========== 存储键 ==========
+    const STORAGE_KEY = 'reading_articles';
+    const WRONG_READING_KEY = 'wrong_reading_set';
+    const WRONG_GRAMMAR_KEY = 'wrong_grammar_set';
+    const SEQ_INDEX_KEY = 'seq_index';
+    const WORD_LIST_KEY = 'grammar_word_list';
+
+    function getArticles() { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+    function saveArticles(articles) { localStorage.setItem(STORAGE_KEY, JSON.stringify(articles)); updateUI(); }
+    function getWrongReading() { return JSON.parse(localStorage.getItem(WRONG_READING_KEY) || '[]'); }
+    function saveWrongReading(set) { localStorage.setItem(WRONG_READING_KEY, JSON.stringify(set)); renderWrongPanels(); }
+    function getWrongGrammar() { return JSON.parse(localStorage.getItem(WRONG_GRAMMAR_KEY) || '[]'); }
+    function saveWrongGrammar(set) { localStorage.setItem(WRONG_GRAMMAR_KEY, JSON.stringify(set)); renderWrongPanels(); }
+    function getSeqIndex() { return parseInt(localStorage.getItem(SEQ_INDEX_KEY) || '0'); }
+    function saveSeqIndex(idx) { localStorage.setItem(SEQ_INDEX_KEY, idx.toString()); }
+    function getWordList() { return JSON.parse(localStorage.getItem(WORD_LIST_KEY) || '[]'); }
+    function saveWordList(list) { localStorage.setItem(WORD_LIST_KEY, JSON.stringify(list)); renderWordLists(); }
+
+    // ========== UI 导航 ==========
+    const panels = {
+        library: document.getElementById('panel-library'),
+        practice: document.getElementById('panel-practice'),
+        wrong: document.getElementById('panel-wrong'),
+        grammar: document.getElementById('panel-grammar')
+    };
+    const navBtns = {
+        library: document.getElementById('nav-library'),
+        practice: document.getElementById('nav-practice'),
+        wrong: document.getElementById('nav-wrong'),
+        grammar: document.getElementById('nav-grammar')
+    };
+
+    function switchPanel(name) {
+        Object.values(panels).forEach(p => p.classList.add('hidden'));
+        panels[name].classList.remove('hidden');
+        Object.values(navBtns).forEach(b => b.classList.remove('active'));
+        navBtns[name].classList.add('active');
+        if (name === 'wrong') {
+            renderWrongPanels();
+            document.getElementById('tab-reading').classList.add('active');
+            document.getElementById('tab-grammar').classList.remove('active');
+            document.getElementById('wrongReadingList').classList.remove('hidden');
+            document.getElementById('wrongGrammarList').classList.add('hidden');
+        }
+    }
+    navBtns.library.onclick = () => switchPanel('library');
+    navBtns.practice.onclick = () => switchPanel('practice');
+    navBtns.wrong.onclick = () => switchPanel('wrong');
+    navBtns.grammar.onclick = () => switchPanel('grammar');
+
+    document.getElementById('tab-reading').onclick = () => {
+        document.getElementById('tab-reading').classList.add('active');
+        document.getElementById('tab-grammar').classList.remove('active');
+        document.getElementById('wrongReadingList').classList.remove('hidden');
+        document.getElementById('wrongGrammarList').classList.add('hidden');
+    };
+    document.getElementById('tab-grammar').onclick = () => {
+        document.getElementById('tab-grammar').classList.add('active');
+        document.getElementById('tab-reading').classList.remove('active');
+        document.getElementById('wrongGrammarList').classList.remove('hidden');
+        document.getElementById('wrongReadingList').classList.add('hidden');
+    };
+
+    // ========== 工具函数 ==========
+    function escapeHtml(text) {
+        const d = document.createElement('div'); d.textContent = text; return d.innerHTML;
+    }
+
+    // ========== Word 解析 ==========
+    function parseWordText(text) {
+        const articles = [];
+        const blocks = text.split(/\n---\n|\n---\r\n|\r\n---\r\n/);
+        blocks.forEach(block => {
+            if (!block.trim()) return;
+            const article = parseSingleArticle(block);
+            if (article && article.questions.length === 5) articles.push(article);
+        });
+        return articles;
+    }
+
+    function parseSingleArticle(text) {
+        const lines = text.split(/\r?\n/).map(l => l.trim());
+        let title = '', passageLines = [], questions = [], state = 'title', currentQ = null, options = [], answerLetter = '';
+        for (let line of lines) {
+            if (line === '') continue;
+            if (state === 'title' && line.toLowerCase().startsWith('title:')) {
+                title = line.substring(6).trim(); state = 'passage'; continue;
+            }
+            if (line.toLowerCase() === 'questions:') { state = 'questions'; continue; }
+            if (state === 'passage') {
+                if (line.toLowerCase() === 'questions:') { state = 'questions'; continue; }
+                passageLines.push(line); continue;
+            }
+            if (state === 'questions') {
+                const qMatch = line.match(/^(\d+)\.\s*(.*)/);
+                if (qMatch) {
+                    if (currentQ) {
+                        const ansIdx = answerLetter.charCodeAt(0) - 65;
+                        if (options.length === 4 && ansIdx >= 0 && ansIdx < 4)
+                            questions.push({ question: currentQ, options: [...options], answer: ansIdx });
+                    }
+                    currentQ = qMatch[2]; options = []; answerLetter = ''; continue;
+                }
+                const optMatch = line.match(/^([A-D])\.\s*(.*)/);
+                if (optMatch) { options.push(optMatch[2]); continue; }
+                const ansMatch = line.match(/^Answer:\s*([A-D])/i);
+                if (ansMatch) answerLetter = ansMatch[1].toUpperCase();
+            }
+        }
+        if (currentQ) {
+            const ansIdx = answerLetter.charCodeAt(0) - 65;
+            if (options.length === 4 && ansIdx >= 0 && ansIdx < 4)
+                questions.push({ question: currentQ, options: [...options], answer: ansIdx });
+        }
+        if (!title) title = '未命名';
+        const passage = passageLines.join('\n').trim();
+        if (!passage || questions.length !== 5) return null;
+        return { title, passage, questions };
+    }
+
+    // Word 上传处理
+    document.getElementById('uploadDocxTrigger').onclick = () => document.getElementById('docxFileInput').click();
+    document.getElementById('docxFileInput').onchange = async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            const parsed = parseWordText(result.value);
+            if (!parsed.length) { alert('未解析到文章，请检查格式'); return; }
+            const existing = getArticles();
+            let added = 0;
+            parsed.forEach(article => {
+                if (!existing.some(a => a.passage.replace(/\s+/g,'').trim() === article.passage.replace(/\s+/g,'').trim())) {
+                    article.id = Date.now() + Math.random();
+                    existing.push(article);
+                    added++;
+                }
+            });
+            if (added) {
+                saveArticles(existing);  // ★ 关键：调用保存函数
+                alert(`成功导入 ${added} 篇阅读理解`);
+            } else {
+                alert('所有文章已存在或格式错误');
+            }
+        } catch (err) {
+            alert('解析失败：' + err.message);
+        }
+        e.target.value = ''; // 允许重复上传同一文件
+    };
+
+    // 手动粘贴解析
+    let parsedArticleTemp = null;
+    function parsePastedText(rawText) {
+        const lines = rawText.split(/\r?\n/).map(l => l.trim());
+        let passageLines = [];
+        let questions = [];
+        let firstQIndex = lines.findIndex(l => /^\d+[）\).]\s*(?:【[^】]*】)?\s*/.test(l));
+        if (firstQIndex === -1) return null;
+        passageLines = lines.slice(0, firstQIndex).filter(l => l !== '');
+        let remaining = lines.slice(firstQIndex);
+        let currentQ = null, options = [], correctIdx = -1;
+        for (let line of remaining) {
+            if (!line) continue;
+            let qm = line.match(/^\d+[）\).]\s*(?:【[^】]*】)?\s*(.*)/);
+            if (qm) {
+                if (currentQ && options.length >= 3 && options.length <= 4 && correctIdx >= 0)
+                    questions.push({ question: currentQ, options: [...options], answer: correctIdx });
+                currentQ = qm[1]; options = []; correctIdx = -1;
+                continue;
+            }
+            let optMatch = line.match(/^([A-D])[\.\)]\s*(.*)/);
+            if (optMatch) {
+                let optText = optMatch[2].trim();
+                if (/（\s*正确答案\s*）/.test(optText)) {
+                    correctIdx = optMatch[1].charCodeAt(0) - 65;
+                    optText = optText.replace(/（\s*正确答案\s*）/, '').trim();
+                }
+                options.push(optText);
+                continue;
+            }
+            let ansMatch = line.match(/^正确答案\s*[：:]\s*([A-D])/i);
+            if (ansMatch) correctIdx = ansMatch[1].charCodeAt(0) - 65;
+        }
+        if (currentQ && options.length >= 3 && options.length <= 4 && correctIdx >= 0)
+            questions.push({ question: currentQ, options: [...options], answer: correctIdx });
+        if (questions.length !== 5) return null;
+        let title = passageLines.join(' ').substring(0, 30).trim() + '...';
+        let passage = passageLines.join('\n').trim();
+        return { title, passage, questions };
+    }
+
+    document.getElementById('showManualAdd').onclick = () => {
+        document.getElementById('manualAddForm').classList.toggle('hidden');
+    };
+    document.getElementById('parseManualBtn').onclick = () => {
+        const text = document.getElementById('manualPasteArea').value.trim();
+        parsedArticleTemp = parsePastedText(text);
+        if (!parsedArticleTemp) { alert('解析失败，请检查格式'); return; }
+        let prevHtml = `<p><strong>标题：</strong>${escapeHtml(parsedArticleTemp.title)}</p>`;
+        prevHtml += `<p><strong>正文：</strong>${escapeHtml(parsedArticleTemp.passage.substring(0,200))}...</p>`;
+        prevHtml += `<p><strong>题目：</strong></p>`;
+        parsedArticleTemp.questions.forEach((q,i) => {
+            prevHtml += `<div>${i+1}. ${escapeHtml(q.question)} → 答案：${String.fromCharCode(65+q.answer)}</div>`;
+        });
+        document.getElementById('previewContent').innerHTML = prevHtml;
+        document.getElementById('manualPreview').classList.remove('hidden');
+    };
+    document.getElementById('confirmManualSave').onclick = () => {
+        if (!parsedArticleTemp) return;
+        if (getArticles().some(a => a.passage.replace(/\s+/g,'').trim() === parsedArticleTemp.passage.replace(/\s+/g,'').trim())) {
+            alert('文章重复'); return;
+        }
+        saveArticles([...getArticles(), { id: Date.now(), ...parsedArticleTemp }]);
+        document.getElementById('manualPasteArea').value = '';
+        document.getElementById('manualPreview').classList.add('hidden');
+        document.getElementById('manualAddForm').classList.add('hidden');
+        alert('已保存到题库！');
+    };
+
+    document.getElementById('clearLibrary').onclick = () => {
+        if (confirm('清空所有题库？')) {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(WRONG_READING_KEY);
+            localStorage.removeItem(WRONG_GRAMMAR_KEY);
+            localStorage.removeItem(SEQ_INDEX_KEY);
+            updateUI();
+            renderWrongPanels();
+        }
+    };
+
+    // 题库列表更新
+    function updateUI() {
+        const articles = getArticles();
+        document.getElementById('articleCount').textContent = articles.length;
+        const listDiv = document.getElementById('articleList');
+        listDiv.innerHTML = articles.map(a => 
+            `<div class="article-list-item">
+                <span><strong>${escapeHtml(a.title)}</strong> (ID:${a.id})</span>
+                <button class="btn-outline del-article" data-id="${a.id}">删除</button>
+            </div>`).join('');
+        listDiv.querySelectorAll('.del-article').forEach(btn => {
+            btn.onclick = (e) => {
+                const id = parseInt(e.target.dataset.id);
+                if (confirm('确定删除？')) {
+                    saveArticles(getArticles().filter(a => a.id !== id));
+                    saveWrongReading(getWrongReading().filter(wid => wid !== id));
+                }
+            };
+        });
+    }
+
+    // ========== 练习功能 ==========
+    const practiceContent = document.getElementById('practiceContent');
+    function loadArticle(article) {
+        if (!article) { practiceContent.innerHTML = '<p>题库为空</p>'; return; }
+        let html = `<h3>${escapeHtml(article.title)}</h3><div class="passage-box">${escapeHtml(article.passage)}</div>`;
+        article.questions.forEach((q, idx) => {
+            html += `<div class="question-block"><p><strong>${idx+1}. ${escapeHtml(q.question)}</strong></p>`;
+            q.options.forEach((opt, oi) => html += `<label><input type="radio" name="q${idx}" value="${oi}"> ${String.fromCharCode(65+oi)}. ${escapeHtml(opt)}</label>`);
+            html += '</div>';
+        });
+        html += `<button id="submitAnswers" class="btn">提交答案</button><div id="scoreResult"></div>`;
+        practiceContent.innerHTML = html;
+       document.getElementById('submitAnswers').onclick = () => {
+           let correct = 0;
+            const qBlocks = document.querySelectorAll('.question-block');
+           article.questions.forEach((q, idx) => {
+               const sel = document.querySelector(`input[name="q${idx}"]:checked`);
+                const userAns = sel ? parseInt(sel.value) : -1;
+                const isRight = userAns === q.answer;
+                if (isRight) correct++;
+                const fb = document.createElement('div');
+                fb.style.marginTop = '6px';
+                fb.style.fontWeight = '600';
+                fb.style.fontSize = '0.9em';
+                const ansText = String.fromCharCode(65 + q.answer) + '. ' + escapeHtml(q.options[q.answer]);
+                if (userAns === -1) {
+                    fb.innerHTML = '<span style="color:#9333ea;">&#x26A0;&#xFE0F; 未作答 &#x2014; 正确答案：' + ansText + '</span>';
+                } else if (isRight) {
+                    fb.innerHTML = '<span style="color:#16a34a;">&#x2705; 正确（' + ansText + '）</span>';
+                } else {
+                    fb.innerHTML = '<span style="color:#dc2626;">&#x274C; 你选了 ' + String.fromCharCode(65 + userAns) + '，正确答案：' + ansText + '</span>';
+                }
+                qBlocks[idx].appendChild(fb);
+           });
+           const res = document.getElementById('scoreResult');
+           const badge = correct >= 4 ? 'correct-count' : 'wrong-count';
+            res.innerHTML = `<span class="result-badge ${badge}">答对 ${correct}/5</span>`;
+            const ws = getWrongReading();
+            if (correct < 4 && !ws.includes(article.id)) { ws.push(article.id); saveWrongReading(ws); res.innerHTML += ' 已加入错题集'; }
+            else if (correct >= 4 && ws.includes(article.id)) { saveWrongReading(ws.filter(id => id !== article.id)); res.innerHTML += ' 已移出错题集'; }
+        };
+    }
+
+    document.getElementById('randomPick').onclick = () => {
+        const arr = getArticles(); if (!arr.length) alert('题库为空'); else loadArticle(arr[Math.floor(Math.random() * arr.length)]);
+    };
+    document.getElementById('sequentialPick').onclick = () => {
+        const arr = getArticles(); if (!arr.length) alert('题库为空');
+        else {
+            let idx = getSeqIndex(); if (idx >= arr.length) idx = 0;
+            loadArticle(arr[idx]); saveSeqIndex((idx + 1) % arr.length);
+            document.getElementById('currentIndexDisplay').textContent = `下篇从第 ${idx+2} 篇开始`;
+        }
+    };
+    document.getElementById('translateBtn').onclick = () => {
+        const sel = window.getSelection().toString().trim();
+        if (!sel) alert('请选中文本'); else window.open(`https://translate.google.com/?sl=en&tl=zh-CN&text=${encodeURIComponent(sel)}`, '_blank');
+    };
+
+    function renderWrongPanels() {
+        // 阅读理解错题
+        const ws = getWrongReading();
+        const list = getArticles().filter(a => ws.includes(a.id));
+        const cont = document.getElementById('wrongReadingList');
+        if (!list.length) { cont.innerHTML = '<p>暂无</p>'; }
+        else {
+            cont.innerHTML = list.map(a => 
+                `<div style="margin:8px 0;padding:8px;background:#fef2f2;border-radius:8px;">
+                    <strong>${escapeHtml(a.title)}</strong>
+                    <button class="btn-outline redo-wrong" data-id="${a.id}">重新练习</button>
+                </div>`).join('');
+            cont.querySelectorAll('.redo-wrong').forEach(b => b.onclick = (e) => {
+                const id = parseInt(e.target.dataset.id);
+                const art = getArticles().find(a => a.id === id);
+                if (art) { switchPanel('practice'); loadArticle(art); }
+            });
+        }
+        // 语法错题
+        const grammarList = getWrongGrammar();
+        const gCont = document.getElementById('wrongGrammarList');
+        if (!grammarList.length) { gCont.innerHTML = '<p>暂无</p>'; }
+        else {
+            let html = '';
+            grammarList.forEach((item, idx) => {
+                html += `<div style="margin:8px 0;padding:8px;background:#fef2f2;border-radius:8px;">
+                    <strong>${idx+1}. ${escapeHtml(item.question)}</strong>
+                    <div>答案：${String.fromCharCode(65+item.answer)}. ${escapeHtml(item.options[item.answer])}</div>
+                    <div style="color:#166534;">解析：${escapeHtml(item.explanation)}</div>
+                    <button class="btn-outline redo-grammar" data-idx="${idx}">重做</button>
+                </div>`;
+            });
+            gCont.innerHTML = html;
+            gCont.querySelectorAll('.redo-grammar').forEach(btn => btn.onclick = (e) => {
+                const idx = parseInt(e.target.dataset.idx);
+                const q = getWrongGrammar()[idx];
+                const div = document.createElement('div');
+                div.innerHTML = `<p><strong>${escapeHtml(q.question)}</strong></p>
+                    ${q.options.map((opt, oi) => `<label><input type="radio" name="redo-g" value="${oi}"> ${String.fromCharCode(65+oi)}. ${escapeHtml(opt)}</label><br>`).join('')}
+                    <button class="btn check-redo">检查</button><div class="redo-result"></div>`;
+                e.target.parentNode.appendChild(div);
+                div.querySelector('.check-redo').onclick = () => {
+                    const sel = div.querySelector('input[name="redo-g"]:checked');
+                    const resDiv = div.querySelector('.redo-result');
+                    if (!sel) { resDiv.innerHTML = '请选择'; return; }
+                    if (parseInt(sel.value) === q.answer) resDiv.innerHTML = '✅ 正确';
+                    else resDiv.innerHTML = `❌ 正确答案 ${String.fromCharCode(65+q.answer)}。${escapeHtml(q.explanation)}`;
+                };
+            });
+        }
+    }
+
+    // ========== 单词本 ==========
+    function renderWordLists() {
+        const list = getWordList();
+        const editContainer = document.getElementById('wordListContainer');
+        const viewContainer = document.getElementById('wordViewContainer');
+        document.getElementById('wordCount').textContent = list.length;
+
+        if (list.length === 0) {
+            editContainer.innerHTML = '<span style="color:#888;">暂无单词</span>';
+            viewContainer.innerHTML = '<span style="color:#888;">暂无单词</span>';
+        } else {
+            editContainer.innerHTML = list.map((w, i) => 
+                `<span class="word-card">${escapeHtml(w.en)} ${escapeHtml(w.cn)}<button data-index="${i}" class="del-word-btn">×</button></span>`
+            ).join('');
+            viewContainer.innerHTML = list.map(w => `<span class="word-card">${escapeHtml(w.en)} ${escapeHtml(w.cn)}</span>`).join('');
+        }
+
+        document.querySelectorAll('.del-word-btn').forEach(btn => {
+            btn.onclick = function() {
+                const idx = parseInt(this.dataset.index);
+                saveWordList(getWordList().filter((_, i) => i !== idx));
+            };
+        });
+    }
+
+    document.getElementById('wordEditTab').onclick = () => {
+        document.getElementById('wordEditTab').classList.add('active');
+        document.getElementById('wordViewTab').classList.remove('active');
+        document.getElementById('wordEditMode').classList.remove('hidden');
+        document.getElementById('wordViewMode').classList.add('hidden');
+    };
+    document.getElementById('wordViewTab').onclick = () => {
+        document.getElementById('wordViewTab').classList.add('active');
+        document.getElementById('wordEditTab').classList.remove('active');
+        document.getElementById('wordEditMode').classList.add('hidden');
+        document.getElementById('wordViewMode').classList.remove('hidden');
+        renderWordLists();
+    };
+
+    // 添加单词
+    document.getElementById('addWordBtn').onclick = () => {
+        const en = document.getElementById('newWordEn').value.trim();
+        const cn = document.getElementById('newWordCn').value.trim();
+        if (!en || !cn) { alert('英文和中文都不能为空'); return; }
+        if (!/^[a-zA-Z]+$/.test(en)) { alert('英文单词只能包含字母'); return; }
+        const list = getWordList();
+        if (list.some(w => w.en === en)) { alert('该单词已存在'); return; }
+        list.push({ en, cn });
+        saveWordList(list);
+        document.getElementById('newWordEn').value = '';
+        document.getElementById('newWordCn').value = '';
+    };
+
+    // ★ 修复单词上传 TXT
+    document.getElementById('uploadWordsTrigger').onclick = () => document.getElementById('wordsFileInput').click();
+    document.getElementById('wordsFileInput').onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const lines = ev.target.result.split('\n');
+            const list = getWordList();
+            let added = 0;
+            lines.forEach(line => {
+                const parts = line.trim().split(/\s+/);
+                if (parts.length >= 2 && /^[a-zA-Z]+$/.test(parts[0])) {
+                    const en = parts[0];
+                    const cn = parts.slice(1).join(' ');
+                    if (!list.some(w => w.en === en)) {
+                        list.push({ en, cn });
+                        added++;
+                    }
+                }
+            });
+            if (added > 0) {
+                saveWordList(list);  // ★ 保存并刷新
+                alert(`成功添加 ${added} 个新单词`);
+            } else {
+                alert('没有新单词（可能已存在或格式错误）');
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    };
+
+    document.getElementById('clearWordsBtn').onclick = () => {
+        if (confirm('清空全部单词？')) saveWordList([]);
+    };
+    document.getElementById('saveWordsBtn').onclick = () => alert('单词本已自动保存到浏览器中！');
+    function exportWordList() {
+        const list = getWordList();
+        if (!list.length) { alert('单词本为空'); return; }
+        const content = list.map(w => `${w.en} ${w.cn}`).join('\n');
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '单词本.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    document.getElementById('exportWordsBtn').onclick = exportWordList;
+    document.getElementById('exportWordsBtnView').onclick = exportWordList;
+
+    // ========== 语法生成 ==========
+    const grammarTemplates = [
+        { question: "If I ___ you, I would apologize.", options: ["am","was","were","are"], answer: 2, explanation: "虚拟语气，be用were" },
+        { question: "Had he studied harder, he ___ the exam.", options: ["passed","would pass","would have passed","will pass"], answer: 2, explanation: "过去虚拟，主句would have done" },
+        { question: "It's high time we ___ action.", options: ["take","took","taken","taking"], answer: 1, explanation: "It's high time后用过去式" },
+        { question: "Only after the accident ___ the importance.", options: ["he realized","did he realize","he has realized","realized he"], answer: 1, explanation: "倒装，did提前" },
+        { question: "I wish I ___ a bird.", options: ["am","was","were","will be"], answer: 2, explanation: "wish虚拟，be用were" }
+    ];
+
+    const irregularVerbs = {
+        "be": { past: "was", ing: "being", s: "is" },
+        "go": { past: "went", ing: "going", s: "goes" },
+        "do": { past: "did", ing: "doing", s: "does" },
+        "have": { past: "had", ing: "having", s: "has" }
+    };
+    function getVerbForms(word) {
+        const lw = word.toLowerCase();
+        if (irregularVerbs[lw]) return irregularVerbs[lw];
+        return {
+            past: word.endsWith('e') ? word + 'd' : word + 'ed',
+            ing: word.endsWith('e') ? word.slice(0,-1)+'ing' : word+'ing',
+            s: (word.endsWith('s')||word.endsWith('x')||word.endsWith('sh')||word.endsWith('ch')) ? word+'es' : word+'s'
+        };
+    }
+    function getAdjectiveForms(word) {
+        if (word.endsWith('y')) return { er: word.slice(0,-1)+'ier', est: word.slice(0,-1)+'iest' };
+        return { er: word+'er', est: word+'est' };
+    }
+
+    const wordTemplates = [
+        { sentence: "She decided ___ (WORD) immediately.", answerForm: 'to do', explanation: "decide to do 固定搭配" },
+        { sentence: "He enjoys ___ (WORD) very much.", answerForm: 'doing', explanation: "enjoy后接doing" },
+        { sentence: "They ___ (WORD) home late last night.", answerForm: 'past', explanation: "过去时，用过去式" },
+        { sentence: "She often ___ (WORD) to school by bus.", answerForm: 's', explanation: "三单，加s/es" },
+        { sentence: "This book is ___ (WORD) than that one.", answerForm: 'er', explanation: "比较级，加er" }
+    ];
+
+    function generateWordQuestion(word) {
+        const tpl = wordTemplates[Math.floor(Math.random() * wordTemplates.length)];
+        const forms = getVerbForms(word);
+        const adjForms = getAdjectiveForms(word);
+        let questionText = tpl.sentence.replace('(WORD)', '______');
+        let options = [], answerIdx = 0;
+        switch (tpl.answerForm) {
+            case 'to do': options = [`to ${word}`, word, forms.ing, forms.past]; answerIdx = 0; break;
+            case 'doing': options = [word, `to ${word}`, forms.ing, forms.past]; answerIdx = 2; break;
+            case 'past': options = [word, forms.s, forms.past, forms.ing]; answerIdx = 2; break;
+            case 's': options = [word, forms.s, forms.past, forms.ing]; answerIdx = 1; break;
+            case 'er': options = [word, adjForms.er, adjForms.est, `more ${word}`]; answerIdx = 1; break;
+            default: options = [word, forms.past, forms.ing, forms.s]; answerIdx = 0;
+        }
+        return { question: questionText, options, answer: answerIdx, explanation: tpl.explanation };
+    }
+
+    document.getElementById('genGrammarBtn').onclick = () => {
+        const count = Math.min(50, Math.max(1, parseInt(document.getElementById('grammarCount').value) || 20));
+        document.getElementById('grammarCount').value = count;
+        const words = getWordList().map(w => w.en);
+        let questions;
+        if (words.length > 0) {
+            questions = Array.from({length: count}, () => generateWordQuestion(words[Math.floor(Math.random() * words.length)]));
+        } else {
+            const pool = grammarTemplates.length ? grammarTemplates : [{ question: "示例", options: ["A","B","C","D"], answer: 0, explanation: "示例" }];
+            questions = Array.from({length: count}, () => pool[Math.floor(Math.random() * pool.length)]);
+        }
+        displayGrammarQuestions(questions);
+    };
+
+    function displayGrammarQuestions(questions) {
+        const output = document.getElementById('grammarOutput');
+        let html = `<h3>共 ${questions.length} 道语法题</h3>`;
+        questions.forEach((q, idx) => {
+            html += `<div class="grammar-item"><p><strong>${idx+1}. ${escapeHtml(q.question)}</strong></p>`;
+            q.options.forEach((opt, oi) => html += `<label><input type="radio" name="gq${idx}" value="${oi}"> ${String.fromCharCode(65+oi)}. ${escapeHtml(opt)}</label><br>`);
+            html += `<div class="grammar-answer" style="display:none;color:#2563eb;">✅ 答案：${String.fromCharCode(65+q.answer)}。${escapeHtml(q.explanation)}</div></div>`;
+        });
+        html += `<button id="checkGrammar" class="btn">提交答案</button>`;
+        output.innerHTML = html;
+        document.getElementById('checkGrammar').onclick = () => {
+            document.querySelectorAll('.grammar-answer').forEach(el => el.style.display = 'block');
+            let correct = 0;
+            const wrongSet = getWrongGrammar();
+            questions.forEach((q, idx) => {
+                const sel = document.querySelector(`input[name="gq${idx}"]:checked`);
+                const userAns = sel ? parseInt(sel.value) : -1;
+                if (userAns === q.answer) correct++;
+                else {
+                    if (!wrongSet.some(item => item.question === q.question && JSON.stringify(item.options) === JSON.stringify(q.options))) {
+                        wrongSet.push({ question: q.question, options: q.options, answer: q.answer, explanation: q.explanation });
+                    }
+                }
+            });
+            saveWrongGrammar(wrongSet);
+            output.innerHTML += `<p style="margin-top:12px;"><strong>正确数：${correct}/${questions.length}</strong>。错题已收入语法错题集。</p>`;
+        };
+    }
+
+    // 初始化
+    renderWordLists();
+    updateUI();
+    switchPanel('library');
+})();
+</script>
+</body>
+</html>
