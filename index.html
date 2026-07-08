@@ -2049,27 +2049,87 @@
         return { question: qText, options: options, answer: answerIdx, explanation: tpl.explanation };
     }
 
+    // Vocabulary-in-context patterns: each works with any word of the given type
+    var vocabPatterns = [
+        { template: 'The team decided to ___ the task immediately.', type: 'verb' },
+        { template: 'She managed to ___ all the difficulties.', type: 'verb' },
+        { template: 'They plan to ___ the new system next month.', type: 'verb' },
+        { template: 'The government will ___ a new policy soon.', type: 'verb' },
+        { template: 'He worked hard to ___ his goal in the end.', type: 'verb' },
+        { template: 'The company chose to ___ the offer without delay.', type: 'verb' },
+        { template: 'We need to ___ this problem from different angles.', type: 'verb' },
+        { template: 'Please ___ the report before you submit it.', type: 'verb' },
+        { template: 'They tried to ___ the needs of their customers.', type: 'verb' },
+        { template: 'The manager asked us to ___ the situation carefully.', type: 'verb' },
+        { template: 'The success of the project ___ on everyone\'s effort.', type: 'verb' },
+        { template: 'She decided to ___ the challenge with confidence.', type: 'verb' },
+        { template: 'The team will ___ the new strategy at the meeting.', type: 'verb' },
+        { template: 'We must ___ the quality of our products constantly.', type: 'verb' },
+        { template: 'He managed to ___ the support of his colleagues.', type: 'verb' },
+        { template: 'The ___ of the new policy was widely discussed.', type: 'noun' },
+        { template: 'She has a wide ___ of knowledge in this area.', type: 'noun' },
+        { template: 'The ___ of the meeting has just been announced.', type: 'noun' },
+        { template: 'We need to find a better solution to this ___.', type: 'noun' },
+        { template: 'The new ___ has greatly improved our work efficiency.', type: 'noun' },
+        { template: 'His ___ in the company grew steadily over time.', type: 'noun' },
+        { template: 'The ___ of the situation must be fully recognized.', type: 'noun' },
+        { template: 'They reached an important ___ after a long discussion.', type: 'noun' },
+        { template: 'The main ___ of the project is to increase sales.', type: 'noun' },
+        { template: 'She showed great ___ in dealing with the crisis.', type: 'noun' },
+        { template: 'The result of the experiment was very ___ to all.', type: 'adj' },
+        { template: 'She gave a ___ explanation of the whole process.', type: 'adj' },
+        { template: 'This is a ___ issue that requires immediate attention.', type: 'adj' },
+        { template: 'The new method is more ___ and efficient than before.', type: 'adj' },
+        { template: 'His attitude was ___ and encouraged everyone a lot.', type: 'adj' },
+        { template: 'The situation became increasingly ___ over the months.', type: 'adj' },
+        { template: 'Her performance in the exam was truly ___.', type: 'adj' },
+        { template: 'The company provides a ___ working environment.', type: 'adj' },
+        { template: 'This approach is ___ to the success of our project.', type: 'adj' },
+        { template: 'The weather in this area is usually ___ throughout the year.', type: 'adj' },
+    ];
+
+    function getWordType(word) {
+        var lw = word.toLowerCase();
+        if (irregularVerbs[lw]) return 'verb';
+        var adjEndings = ['able','ible','ful','less','ous','al','ive','cal','ent','ant','ish','ic','ary','ory','ate'];
+        var nounEndings = ['tion','sion','ment','ness','ity','ance','ence','ship','dom','ism','ist','er','or','ee','age','ure'];
+        for (var i = 0; i < adjEndings.length; i++) { if (lw.endsWith(adjEndings[i])) return 'adj'; }
+        for (var i = 0; i < nounEndings.length; i++) { if (lw.endsWith(nounEndings[i])) return 'noun'; }
+        if (lw.length <= 6) return 'verb';
+        return 'noun';
+    }
+
     function generateVocabQuestion(allWords) {
         var targetIdx = Math.floor(Math.random() * allWords.length);
         var target = allWords[targetIdx];
-        var others = allWords.filter(function(_, i) { return i !== targetIdx; });
-        var distractors = [];
-        var used = {};
-        while (distractors.length < 3 && distractors.length < others.length) {
-            var ri = Math.floor(Math.random() * others.length);
-            if (!used[ri]) { used[ri] = true; distractors.push(others[ri].cn); }
+        var type = getWordType(target.en);
+        var patterns = vocabPatterns.filter(function(p) { return p.type === type; });
+        if (patterns.length === 0) patterns = vocabPatterns;
+        var pattern = patterns[Math.floor(Math.random() * patterns.length)];
+        var qText = pattern.template.replace(/___/g, '______');
+        var sameType = allWords.filter(function(w) { return getWordType(w.en) === type && w.en !== target.en; });
+        var distractors = [], used = {};
+        while (distractors.length < 3 && distractors.length < sameType.length) {
+            var ri = Math.floor(Math.random() * sameType.length);
+            if (!used[ri]) { used[ri] = true; distractors.push(sameType[ri].en); }
         }
-        var options = [target.cn].concat(distractors);
+        while (distractors.length < 3) {
+            var ri = Math.floor(Math.random() * allWords.length);
+            if (allWords[ri].en !== target.en && distractors.indexOf(allWords[ri].en) < 0) {
+                distractors.push(allWords[ri].en);
+            }
+        }
+        var options = [target.en].concat(distractors);
         for (var i = options.length - 1; i > 0; i--) {
             var j = Math.floor(Math.random() * (i + 1));
             var tmp = options[i]; options[i] = options[j]; options[j] = tmp;
         }
-        var answerIdx = options.indexOf(target.cn);
+        var answerIdx = options.indexOf(target.en);
         return {
-            question: 'Which of the following is the correct meaning of "' + target.en + '"?',
+            question: qText,
             options: options,
             answer: answerIdx,
-            explanation: '"' + target.en + '" means "' + target.cn + '"'
+            explanation: 'The correct word is "' + target.en + '" (' + target.cn + ')'
         };
     }
 
@@ -2080,12 +2140,13 @@
         var allWords = userWords.length > 0 ? userWords : BUILTIN_WORDS;
         var wordList = allWords.map(function(w) { return w.en; });
         var questions = [];
+        var vocabRatio = 0.4 + Math.random() * 0.1; // 40-50% vocabulary
         for (var i = 0; i < count; i++) {
-            if (Math.random() < 0.7) {
+            if (Math.random() < vocabRatio) {
+                questions.push(generateVocabQuestion(allWords));
+            } else {
                 var w = wordList[Math.floor(Math.random() * wordList.length)];
                 questions.push(generateGrammarQuestion(w));
-            } else {
-                questions.push(generateVocabQuestion(allWords));
             }
         }
         displayGrammarQuestions(questions);
