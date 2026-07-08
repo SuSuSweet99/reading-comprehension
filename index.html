@@ -93,8 +93,10 @@
             <div id="tab-reading" class="wrong-tab active">📖 阅读理解</div>
             <div id="tab-grammar" class="wrong-tab">📝 语法错题</div>
         </div>
-        <div id="wrongReadingList"></div>
-        <div id="wrongGrammarList" class="hidden"></div>
+       <div id="wrongReadingList"></div>
+        <button id="clearWrongReading" class="btn-outline" style="margin-top:8px;">&#x1F5D1;&#xFE0F; 清空全部阅读理解错题</button>
+       <div id="wrongGrammarList" class="hidden"></div>
+        <button id="clearWrongGrammar" class="btn-outline" style="margin-top:8px;">&#x1F5D1;&#xFE0F; 清空全部语法错题</button>
     </div>
 
     <!-- 语法生成面板 -->
@@ -154,7 +156,6 @@
     function saveWrongGrammar(set) { localStorage.setItem(WRONG_GRAMMAR_KEY, JSON.stringify(set)); renderWrongPanels(); }
     function getSeqIndex() { return parseInt(localStorage.getItem(SEQ_INDEX_KEY) || '0'); }
     function saveSeqIndex(idx) { localStorage.setItem(SEQ_INDEX_KEY, idx.toString()); }
-    
     function getWordList() { return JSON.parse(localStorage.getItem(WORD_LIST_KEY) || '[]'); }
     function saveWordList(list) { localStorage.setItem(WORD_LIST_KEY, JSON.stringify(list)); renderWordLists(); }
 
@@ -238,7 +239,7 @@
                 if (qMatch) {
                     if (currentQ) {
                         const ansIdx = answerLetter.charCodeAt(0) - 65;
-                        if (options.length === 4 && ansIdx >= 0 && ansIdx < 4)
+                        if (options.length >= 3 && options.length <= 4 && ansIdx >= 0 && ansIdx < 4)
                             questions.push({ question: currentQ, options: [...options], answer: ansIdx });
                     }
                     currentQ = qMatch[2]; options = []; answerLetter = ''; continue;
@@ -251,7 +252,7 @@
         }
         if (currentQ) {
             const ansIdx = answerLetter.charCodeAt(0) - 65;
-            if (options.length === 4 && ansIdx >= 0 && ansIdx < 4)
+            if (options.length >= 3 && options.length <= 4 && ansIdx >= 0 && ansIdx < 4)
                 questions.push({ question: currentQ, options: [...options], answer: ansIdx });
         }
         if (!title) title = '未命名';
@@ -295,9 +296,9 @@
     let parsedArticleTemp = null;
     function parsePastedText(rawText) {
         const lines = rawText.split(/\r?\n/).map(l => l.trim());
-        let passageLines = [];
+       let passageLines = [];
         let questions = [];
-        let firstQIndex = lines.findIndex(l => /^\d+[）\).]\s*(?:【[^】]*】)?\s*/.test(l));
+       let firstQIndex = lines.findIndex(l => /^\d+[）\).]\s*(?:【[^】]*】)?\s*/.test(l));
         if (firstQIndex === -1) return null;
         passageLines = lines.slice(0, firstQIndex).filter(l => l !== '');
         let remaining = lines.slice(firstQIndex);
@@ -508,11 +509,11 @@
         const list = getWordList();
         const editContainer = document.getElementById('wordListContainer');
         const viewContainer = document.getElementById('wordViewContainer');
-        document.getElementById('wordCount').textContent = list.length
+        document.getElementById('wordCount').textContent = list.length;
 
         if (list.length === 0) {
-            editContainer.innerHTML = '<span style="color:#888;">暂无自定义单词（内置词库 1776 个词将用于语法生成）</span>';
-            viewContainer.innerHTML = '<span style="color:#888;">暂无自定义单词（内置词库 1776 个词将用于语法生成）</span>';
+            editContainer.innerHTML = '<span style="color:#888;">暂无单词</span>';
+            viewContainer.innerHTML = '<span style="color:#888;">暂无单词</span>';
         } else {
             editContainer.innerHTML = list.map((w, i) => 
                 `<span class="word-card">${escapeHtml(w.en)} ${escapeHtml(w.cn)}<button data-index="${i}" class="del-word-btn">×</button></span>`
@@ -528,7 +529,14 @@
         });
     }
 
-    document.getElementById('wordEditTab').onclick = () => {
+   document.getElementById('wordEditTab').onclick = () => {
+    document.getElementById('clearWrongReading').onclick = () => {
+        if (confirm('确定清空所有阅读理解错题吗？')) { saveWrongReading([]); }
+    };
+    document.getElementById('clearWrongGrammar').onclick = () => {
+        if (confirm('确定清空所有语法错题吗？')) { saveWrongGrammar([]); }
+    };
+
         document.getElementById('wordEditTab').classList.add('active');
         document.getElementById('wordViewTab').classList.remove('active');
         document.getElementById('wordEditMode').classList.remove('hidden');
@@ -594,9 +602,8 @@
     document.getElementById('saveWordsBtn').onclick = () => alert('单词本已自动保存到浏览器中！');
     function exportWordList() {
         const list = getWordList();
-        if (!list.length && !BUILTIN_WORDS.length) { alert('单词本为空'); return; }
-        const exportWords = list.length > 0 ? list : BUILTIN_WORDS;
-        const content = exportWords.map(w => `${w.en} ${w.cn}`).join('\n');
+        if (!list.length) { alert('单词本为空'); return; }
+        const content = list.map(w => `${w.en} ${w.cn}`).join('\n');
         const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -611,7 +618,7 @@
     document.getElementById('exportWordsBtnView').onclick = exportWordList;
 
     // ========== 语法生成 ==========
-        const BUILTIN_WORDS = [
+    const BUILTIN_WORDS = [
         { en: 'abandon', cn: '遗弃，放弃' },
         { en: 'abandonment', cn: '放弃' },
         { en: 'abdomen', cn: '腹部，下腹，腹腔' },
@@ -1214,7 +1221,7 @@
         { en: 'high-powered', cn: '高能力的，高性能的；精力充沛的' },
         { en: 'high-quality', cn: '高质量的' },
         { en: 'high-voltage', cn: '高电压的；有力的' },
-        { en: 'high-tech', cn: '高科技的' },
+        { en: 'high-tech', cn: '\'haɪtek] 高科技的' },
         { en: 'hit', cn: '突然发生；击打' },
         { en: 'hitchhiker', cn: '搭便车者' },
         { en: 'holidaymaker', cn: '度假者' },
@@ -1251,7 +1258,7 @@
         { en: 'incineration', cn: '焚化；烧成灰' },
         { en: 'inclusive', cn: '包括的，包括广泛的' },
         { en: 'income', cn: '收入，收益' },
-        { en: 'inconvenient ˌɪnkən\\'viːniənt]', cn: '不方便的；打扰的，麻烦的' },
+        { en: 'inconvenient ˌɪnkən\'viːniənt]', cn: '不方便的；打扰的，麻烦的' },
         { en: 'increase', cn: '增长；增加；增进' },
         { en: 'indebtedness', cn: '债务，欠款' },
         { en: 'indeed', cn: '的确，确实，真正地' },
@@ -1937,12 +1944,13 @@
         { en: 'zoology', cn: '动物学' }
     ];
 
-    const grammarTemplates = [];
-    // 从内置词库动态生成语法题
-    function getGrammarWord() {
-        const words = getWordList();
-        return words[Math.floor(Math.random() * words.length)];
-    }
+        const grammarTemplates = [
+        { question: "If I ___ you, I would apologize.", options: ["am","was","were","are"], answer: 2, explanation: "虚拟语气，be用were" },
+        { question: "Had he studied harder, he ___ the exam.", options: ["passed","would pass","would have passed","will pass"], answer: 2, explanation: "过去虚拟，主句would have done" },
+        { question: "It's high time we ___ action.", options: ["take","took","taken","taking"], answer: 1, explanation: "It's high time后用过去式" },
+        { question: "Only after the accident ___ the importance.", options: ["he realized","did he realize","he has realized","realized he"], answer: 1, explanation: "倒装，did提前" },
+        { question: "I wish I ___ a bird.", options: ["am","was","were","will be"], answer: 2, explanation: "wish虚拟，be用were" }
+    ];
 
     const irregularVerbs = {
         "be": { past: "was", ing: "being", s: "is" },
@@ -1992,7 +2000,8 @@
     document.getElementById('genGrammarBtn').onclick = () => {
         const count = Math.min(50, Math.max(1, parseInt(document.getElementById('grammarCount').value) || 20));
         document.getElementById('grammarCount').value = count;
-        const words = (getWordList().length > 0 ? getWordList() : BUILTIN_WORDS).map(w => w.en);
+        const userWords = getWordList();
+        const words = userWords.length > 0 ? userWords.map(w => w.en) : BUILTIN_WORDS.map(w => w.en);
         let questions;
         if (words.length > 0) {
             questions = Array.from({length: count}, () => generateWordQuestion(words[Math.floor(Math.random() * words.length)]));
