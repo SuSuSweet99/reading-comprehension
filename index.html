@@ -1972,46 +1972,124 @@
         return { er: word+'er', est: word+'est' };
     }
 
-    const wordTemplates = [
-        { sentence: "She decided ___ (WORD) immediately.", answerForm: 'to do', explanation: "decide to do 固定搭配" },
-        { sentence: "He enjoys ___ (WORD) very much.", answerForm: 'doing', explanation: "enjoy后接doing" },
-        { sentence: "They ___ (WORD) home late last night.", answerForm: 'past', explanation: "过去时，用过去式" },
-        { sentence: "She often ___ (WORD) to school by bus.", answerForm: 's', explanation: "三单，加s/es" },
-        { sentence: "This book is ___ (WORD) than that one.", answerForm: 'er', explanation: "比较级，加er" }
+    // === 40+ diverse grammar patterns across 10+ grammar points ===
+    const grammarPatterns = [
+        { point: 'past', sentence: 'Yesterday, the team ___ the difficult task successfully.', answerForm: 'past', explanation: '一般过去时：yesterday 表示过去时间，动词用过去式' },
+        { point: 'past', sentence: 'Last week, our team ___ the project ahead of schedule.', answerForm: 'past', explanation: '一般过去时：last week 为过去时间，谓语动词用过去式' },
+        { point: 'past', sentence: 'The company ___ a new strategy in early 2023.', answerForm: 'past', explanation: '一般过去时：in early 2023 是过去时间，动词用过去式' },
+        { point: 'past', sentence: 'She ___ the report just before the deadline.', answerForm: 'past', explanation: '一般过去时：描述过去完成的动作，动词用过去式' },
+        { point: 'past', sentence: 'They ___ the proposal at yesterday\'s board meeting.', answerForm: 'past', explanation: '一般过去时：yesterday\'s meeting 表过去，动词变过去式' },
+        { point: 'present', sentence: 'He always ___ to work despite the bad weather.', answerForm: 's', explanation: '一般现在时：主语 he 为第三人称单数，动词加 s' },
+        { point: 'present', sentence: 'She often ___ her teammates with creative ideas.', answerForm: 's', explanation: '一般现在时：主语 she 是第三人称单数，谓语动词加 s/es' },
+        { point: 'present', sentence: 'The director regularly ___ the team\'s progress.', answerForm: 's', explanation: '一般现在时：the director 为第三人称单数，动词加 s' },
+        { point: 'present', sentence: 'He usually ___ the office at 8 o\'clock sharp.', answerForm: 's', explanation: '一般现在时：表示经常性动作，主语三单，动词加 s' },
+        { point: 'present', sentence: 'She never ___ a chance to improve her skills.', answerForm: 's', explanation: '一般现在时：never 表频率，主语 she 三单，动词加 s' },
+        { point: 'infinitive', sentence: 'The team decided ___ the proposal immediately.', answerForm: 'to do', explanation: 'decide to do 固定搭配，意为"决定做某事"' },
+        { point: 'infinitive', sentence: 'We agreed ___ together on this new project.', answerForm: 'to do', explanation: 'agree to do 意为"同意做某事"，to 后接动词原形' },
+        { point: 'infinitive', sentence: 'She refused ___ the unreasonable request.', answerForm: 'to do', explanation: 'refuse to do 固定搭配，意为"拒绝做某事"' },
+        { point: 'infinitive', sentence: 'They planned ___ a new branch in the city.', answerForm: 'to do', explanation: 'plan to do 意为"计划做某事"，后接动词原形' },
+        { point: 'infinitive', sentence: 'He offered ___ us with the difficult task.', answerForm: 'to do', explanation: 'offer to do 意为"主动提出做某事"，to 后接动词原形' },
+        { point: 'gerund', sentence: 'He enjoys ___ new skills during his spare time.', answerForm: 'doing', explanation: 'enjoy 后接动名词（doing），表示"喜欢做某事"' },
+        { point: 'gerund', sentence: 'They finished ___ the report before the deadline.', answerForm: 'doing', explanation: 'finish 后接动名词，意为"做完某事"' },
+        { point: 'gerund', sentence: 'She suggested ___ the meeting to next week.', answerForm: 'doing', explanation: 'suggest 后接动名词，表示"建议做某事"' },
+        { point: 'gerund', sentence: 'He avoided ___ any unnecessary risks.', answerForm: 'doing', explanation: 'avoid 后接动名词，意为"避免做某事"' },
+        { point: 'gerund', sentence: 'They considered ___ the plan at the last moment.', answerForm: 'doing', explanation: 'consider 后接动名词，表示"考虑做某事"' },
+        { point: 'comparative', sentence: 'This method is much ___ than the previous one.', answerForm: 'er', explanation: 'than 是比较级标志，形容词变比较级形式' },
+        { point: 'comparative', sentence: 'The new system is even ___ than the old version.', answerForm: 'er', explanation: 'than 前用比较级，表示"比……更……"' },
+        { point: 'comparative', sentence: 'This solution is far ___ than the alternative.', answerForm: 'er', explanation: 'far + 比较级表示"……得多"，than 引导比较对象' },
+        { point: 'comparative', sentence: 'Her performance was far ___ than we expected.', answerForm: 'er', explanation: 'than 表示比较，形容词用比较级形式' },
+        { point: 'comparative', sentence: 'The situation became even ___ than before.', answerForm: 'er', explanation: 'even + 比较级表示"更加……"，than 后接比较对象' },
+        { point: 'superlative', sentence: 'Among all staff, she is the ___ person for this job.', answerForm: 'est', explanation: 'the + 最高级表示"最……"，among 表示范围' },
+        { point: 'superlative', sentence: 'This is the ___ decision I have ever made.', answerForm: 'est', explanation: '最高级前加 the，表示在一组中最……的' },
+        { point: 'superlative', sentence: 'He is considered the ___ expert in this field.', answerForm: 'est', explanation: 'the + 最高级，表示"最……的"，常用于描述' },
+        { point: 'passive', sentence: 'The meeting was ___ by the general manager.', answerForm: 'past', explanation: '被动语态：be + 过去分词，表示"被……"' },
+        { point: 'passive', sentence: 'The report was ___ by the assistant yesterday.', answerForm: 'past', explanation: '被动语态：was + 过去分词，yesterday 表示过去' },
+        { point: 'passive', sentence: 'The new policy was ___ by all departments.', answerForm: 'past', explanation: '被动语态：be + 过去分词，动作承受者作主语' },
+        { point: 'perfect', sentence: 'They have already ___ the new software system.', answerForm: 'past', explanation: '现在完成时：have + 过去分词，表示已完成的动作' },
+        { point: 'perfect', sentence: 'She has ___ great progress this year.', answerForm: 'past', explanation: '现在完成时：has + 过去分词，强调对现在的影响' },
+        { point: 'perfect', sentence: 'We have never ___ such a difficult problem.', answerForm: 'past', explanation: '现在完成时：have + 过去分词，never 表示从未有过' },
+        { point: 'future', sentence: 'The firm will ___ a new branch next year.', answerForm: 'base', explanation: '一般将来时：will + 动词原形，表示将要发生的动作' },
+        { point: 'future', sentence: 'We are going to ___ the project by this Friday.', answerForm: 'base', explanation: 'be going to + 动词原形，表示计划好的将来动作' },
+        { point: 'future', sentence: 'The director will ___ the final decision tomorrow.', answerForm: 'base', explanation: '一般将来时：will + 动词原形，tomorrow 表将来时间' },
+        { point: 'modal', sentence: 'You must ___ the application before the deadline.', answerForm: 'base', explanation: '情态动词 must 后接动词原形，表示必须做某事' },
+        { point: 'modal', sentence: 'We should ___ the customer\'s needs carefully.', answerForm: 'base', explanation: 'should + 动词原形，表示应该做某事' },
+        { point: 'modal', sentence: 'Staff can ___ flexible working hours.', answerForm: 'base', explanation: 'can + 动词原形，表示能够或有权利做某事' },
+        { point: 'conditional', sentence: 'If you ___ hard you will achieve your goal.', answerForm: 'base', explanation: '条件状语从句：主将从现，if 从句用一般现在时' },
+        { point: 'conditional', sentence: 'We will ___ the goal if everyone works together.', answerForm: 'base', explanation: 'if 条件句：主句用将来时，从句用一般现在时' },
     ];
 
-    function generateWordQuestion(word) {
-        const tpl = wordTemplates[Math.floor(Math.random() * wordTemplates.length)];
-        const forms = getVerbForms(word);
-        const adjForms = getAdjectiveForms(word);
-        let questionText = tpl.sentence.replace('(WORD)', '______');
-        let options = [], answerIdx = 0;
-        switch (tpl.answerForm) {
-            case 'to do': options = [`to ${word}`, word, forms.ing, forms.past]; answerIdx = 0; break;
-            case 'doing': options = [word, `to ${word}`, forms.ing, forms.past]; answerIdx = 2; break;
-            case 'past': options = [word, forms.s, forms.past, forms.ing]; answerIdx = 2; break;
-            case 's': options = [word, forms.s, forms.past, forms.ing]; answerIdx = 1; break;
-            case 'er': options = [word, adjForms.er, adjForms.est, `more ${word}`]; answerIdx = 1; break;
-            default: options = [word, forms.past, forms.ing, forms.s]; answerIdx = 0;
-        }
-        return { question: questionText, options, answer: answerIdx, explanation: tpl.explanation };
+    const recentPoints = [];
+    const MAX_RECENT = 3;
+
+    function getAvailablePatterns() {
+        return grammarPatterns.filter(function(p) { return !recentPoints.includes(p.point); });
     }
 
-    document.getElementById('genGrammarBtn').onclick = () => {
-        const count = Math.min(50, Math.max(1, parseInt(document.getElementById('grammarCount').value) || 20));
+    function generateGrammarQuestion(word) {
+        var available = getAvailablePatterns();
+        var pool = available.length > 0 ? available : grammarPatterns;
+        var tpl = pool[Math.floor(Math.random() * pool.length)];
+        recentPoints.push(tpl.point);
+        if (recentPoints.length > MAX_RECENT) recentPoints.shift();
+
+        var forms = getVerbForms(word);
+        var adjForms = getAdjectiveForms(word);
+        var qText = tpl.sentence.replace(/___/g, '______');
+        var options = [], answerIdx = 0;
+        switch (tpl.answerForm) {
+            case 'to do': options = ['to ' + word, word, forms.ing, forms.past]; answerIdx = 0; break;
+            case 'doing': options = [word, 'to ' + word, forms.ing, forms.past]; answerIdx = 2; break;
+            case 'past': options = [word, forms.s, forms.past, forms.ing]; answerIdx = 2; break;
+            case 's': options = [word, forms.s, forms.past, forms.ing]; answerIdx = 1; break;
+            case 'er': options = [word, adjForms.er, adjForms.est, 'more ' + word]; answerIdx = 1; break;
+            case 'est': options = [word, adjForms.er, adjForms.est, 'most ' + word]; answerIdx = 2; break;
+            case 'base': options = [word + 's', word + 'ed', word, forms.ing]; answerIdx = 2; break;
+            default: options = [word, forms.past, forms.ing, forms.s]; answerIdx = 0;
+        }
+        return { question: qText, options: options, answer: answerIdx, explanation: tpl.explanation };
+    }
+
+    function generateVocabQuestion(allWords) {
+        var targetIdx = Math.floor(Math.random() * allWords.length);
+        var target = allWords[targetIdx];
+        var others = allWords.filter(function(_, i) { return i !== targetIdx; });
+        var distractors = [];
+        var used = {};
+        while (distractors.length < 3 && distractors.length < others.length) {
+            var ri = Math.floor(Math.random() * others.length);
+            if (!used[ri]) { used[ri] = true; distractors.push(others[ri].cn); }
+        }
+        var options = [target.cn].concat(distractors);
+        for (var i = options.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = options[i]; options[i] = options[j]; options[j] = tmp;
+        }
+        var answerIdx = options.indexOf(target.cn);
+        return {
+            question: 'Which of the following is the correct meaning of "' + target.en + '"?',
+            options: options,
+            answer: answerIdx,
+            explanation: '"' + target.en + '" means "' + target.cn + '"'
+        };
+    }
+
+    document.getElementById('genGrammarBtn').onclick = function() {
+        var count = Math.min(50, Math.max(1, parseInt(document.getElementById('grammarCount').value) || 20));
         document.getElementById('grammarCount').value = count;
-        const userWords = getWordList();
-        const words = userWords.length > 0 ? userWords.map(w => w.en) : BUILTIN_WORDS.map(w => w.en);
-        let questions;
-        if (words.length > 0) {
-            questions = Array.from({length: count}, () => generateWordQuestion(words[Math.floor(Math.random() * words.length)]));
-        } else {
-            const pool = grammarTemplates.length ? grammarTemplates : [{ question: "示例", options: ["A","B","C","D"], answer: 0, explanation: "示例" }];
-            questions = Array.from({length: count}, () => pool[Math.floor(Math.random() * pool.length)]);
+        var userWords = getWordList();
+        var allWords = userWords.length > 0 ? userWords : BUILTIN_WORDS;
+        var wordList = allWords.map(function(w) { return w.en; });
+        var questions = [];
+        for (var i = 0; i < count; i++) {
+            if (Math.random() < 0.7) {
+                var w = wordList[Math.floor(Math.random() * wordList.length)];
+                questions.push(generateGrammarQuestion(w));
+            } else {
+                questions.push(generateVocabQuestion(allWords));
+            }
         }
         displayGrammarQuestions(questions);
     };
-
     function displayGrammarQuestions(questions) {
         const output = document.getElementById('grammarOutput');
         let html = `<h3>共 ${questions.length} 道语法题</h3>`;
